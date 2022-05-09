@@ -4,7 +4,7 @@ Since women In order to facilitate the gender equality for employment, we decide
 
 
 ## Hypothesis 
-Based on the literature review, we have the hypothesis that gender gap will be will be smaller if government can develop more related policy and provide more subsidy to families. For example, countries has less benefit like parental leave policy, cash allowance for families have wider gender inequality between male and female. 
+Based on the literature review, we have the hypothesis that gender gap will be narrowed if government can develop more related policy and provide more support to families. For example, countries has less benefit like parental leave policy, cash allowance for families have wider gender inequality between male and female. 
 
  
 ## Members:
