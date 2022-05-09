@@ -1,0 +1,514 @@
+---
+title: "Data Visualization Final Projects"
+author: 'Yao Chen, Yijiao Zuo, Yunhan Zhang '
+date: "5/1/2022"
+output:
+  html_document:
+    df_print: paged
+  css:
+  - default
+  - default-fonts
+  - custom_Xaringan.css
+  lib_dir: libs
+  nature:
+    highlightStyle: github
+    highlightLines: yes
+    countIncrementalSlides: no
+  keep_md: yes
+  xaringan::moon_reader: null
+---
+  
+# Project Goal 
+  In order to facilitate the gender equality for employment, we decided to take a deep dive analysis into the contributors of gender gap.Through looking into the gender gap of OECD countries, our project objective is to find what variables or aspects are related with gender gap
+
+### Main Sections 
+##### 1. Overview for Gender gap 
+##### 2. Relationship between Gender Gap & Public Social Expenditure on Family
+##### 3. Relationship between Gender Gap & Fertility Rate
+##### 4. Relationship between Gender Gap & Age
+##### 5. US Case Study and Text Analysis 
+##### 6. Interactive Data Table for all information
+ 
+### Literature Review 
+  Many literature discuss and research about the parental leave policy with gender issues. A research paper in 2008, Ray, Gorick and Schmitt suggest that leave policies can either reinforce or relieve the gender inequality in both work and family. They find the unpaid feature of the FMLA in the U.S. works against women. The reason is that men who usually have a higher income are less likely to take the unpaid leave than women, which then lead more women stay at home to do the care work. (Ray, Gorick and Schmitt, 2008) 
+
+  Most scholars consent the dual earners, dual carers model that the government promote in order to achieve gender equality. Many researches indicate paid parental leave will lead more father to take the leave and allow mothers to stay in the labor force (Bowman, 2014; Zimmerman, 2015)
+  
+1. Bowman, John R.2014. Capitalisms Compared: Welfare, Work, and Business. 1st ed., SAGE/CQ Press
+2.  Rebecca Ray, Janet C. Gornick, and John Schmitt. 2009. “Parental Leave Policies in 21 Countries: Assessing Generosity and Gender Equality,” Center for Economic and Policy Research. https://www.cepr.net/documents/publications/parental_2008_09.pdf 
+3.  ZIMMERMAN, MARY K. “Paying Family Caregivers: Parental Leave and Gender Equality in Sweden.” Caring on the Clock: The Complexities and Contradictions of Paid Care Work, edited by MIGNON DUFFY et al., Rutgers University Press, 2015, pp. 213–224.   
+
+
+### Hypothesis 
+Based on the literature review, we have the hypothesis that gender gap will be narrowed down if government can develop more related policy and provide more support to families. For example, countries has more benefit like parental leave policy, cash allowance for families have narrower gender inequality between male and female.
+
+### Method 
+  For the method, we performed an exploratory data analysis to investigate the correlations between variables and gender gap of OECD Countries. Since the data of gender gap in terms of employment rate is more complete compare to family work participation of parent, we mostly analyze the gender gap using the measurement of labor participation. we deployed a relatively small portion of analysis about paid parental leave reserved for father and mother to measure the gender equality since we can understand how much time father and mother contributed in terms of taking care of their children.
+  
+  Moreover, we specifically conducted a case study of United States to explore more about the specific policies associated with gender equality.
+
+
+### DATA Selection
+We have three dataset for this project:
+
+1. Employment(OECD database):
+295,119 observations, includes three key metrics for different age groups in 39 countries: the employment/population ratio, unemployment rate, labor force participation rate
+
+2. Family(OECD database): 
+11,639 observations, includes four key metric we care about for 39 countries: gender gap in employment, paid parental leave for mothers and fathers, fertility rate, government social expenditure on family as percentage of GDP
+
+3. Speech: 
+Considering presidents will usually present their vision of America and set forth their goals for the nation, thus we collected President's Inaugural Address of US from 1960 to 2022(four-year term),and want to apply text analysis to explore whether president pay attention to "gender gap for employment" or "women unemployment" on their goal for nation. 
+
+We mainly look at the data from 2017 for correlation analysis because COVID-19 impose a huge influence on employment/unemployment for 2019-2022, which will bias the gender gap effect on employment, and government social expenditure data are not comprehensive for 2018. Thus, we choose data of 2017 as our main observations. 
+
+
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library("knitr")
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, 
+                      message=FALSE, warning = FALSE,
+                      fig.height=5, fig.width=9, cache = TRUE) 
+options(htmltools.dir.version = FALSE)
+packages <- c("devtools","knitr","tidyverse","widgetframe","readr",
+              "leaflet","RColorBrewer", "rgdal","countrycode",
+              "leaflet.extras", "widgetframe","dplyr","plotly","ggplot2","tidytext","ggthemes","wordcloud","tm","htmlwidgets")
+
+
+packages <- lapply(packages, FUN = function(x) {
+  if(!require(x, character.only = TRUE)) {
+    install.packages(x)
+  library(x, character.only = TRUE)
+  }
+}
+)
+```
+
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+family <- read_csv("family.csv")
+employment <- read_csv("employment.csv")
+speech <- read_csv("speech.csv")
+```
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+public_social_expenditure <- family %>% filter(Indicator == "Total public social expenditure on families as a % of GDP")
+```
+
+
+### 1. Overview for Gender gap 
+Visualize the gender gap and government expenditure on family from overall perspective by using Geo-spacial visualization and Line chart
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(leaflet)
+#download.file("http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip" , destfile="world_shape_file.zip")
+#system("world_shape_file")
+```
+#### 1-1. Geo-Spatial Visualization for Gender Gap
+```{r,,echo=FALSE,warning=FALSE,message=FALSE}
+
+world_spdf2 = readOGR(dsn= "./world_map", 
+                     layer="TM_WORLD_BORDERS_SIMPL-0.3",verbose=FALSE)
+
+emp_gap <- family %>% filter(IND=="FAM6A")
+emp_gap_2017 <-emp_gap%>%filter(Year==2017)
+
+combined2 <- world_spdf2@data %>% 
+  left_join(emp_gap_2017, by = c(NAME = "Country"))
+world_spdf2@data <- combined2 
+
+
+
+leaflet(world_spdf2, 
+              options = leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>% 
+  #addTiles(group = "OpenStreetMap") %>%
+ setView(lat=10, lng=0 , zoom=2) %>%
+  
+ # Add country borders 
+ addPolygons(stroke = TRUE, smoothFactor = 0.5,
+             weight=1, color='#333333', opacity=1, 
+ # Add colors for life exp quantiles
+             fillColor = ~colorQuantile("RdBu", Value)(Value), #RdBu #PiYG #RdGy
+             fillOpacity = 1,
+  # Add label 
+  label = ~stringr::str_c(NAME, ' ',
+          formatC(Value, big.mark = ',', format='d')),
+  labelOptions = labelOptions(direction = 'auto'),
+ # Add hightlighting for polygons
+  highlightOptions = highlightOptions( #<<
+          color='#000000', weight = 3, #<<
+          bringToFront = TRUE, sendToBack = TRUE) #<<
+    ) %>%
+  addLegend(
+  "bottomright", 
+  pal = colorQuantile("RdBu", world_spdf2$Value, n=4),
+  values = ~Value,
+  title = htmltools::HTML("2017 Gender gap (male-less-female) in the employment-to-population rate"),
+opacity = 1, 
+  labFormat = function(type, cuts, p) {
+n = length(cuts)
+paste0(cuts[-n], " – ", cuts[-1])}
+)
+#frameWidget(wm3)
+
+```
+For the map, we divided the countries into 4 quantile. The first quantile has the gender gap between 0.4 to 6.8, which are countries doing the best in term of gender equality (Employment). For example, Sweden, Iceland, Finland, Latvia and Canada. Countries like Turkey, Brazil, Mexico, Chile, Japan, Columbia are countries have the lowest gender equality in terms of employment rate gap, which are falls into the fourth quantile between 15.5% - 38.5% 
+
+##### 1-2.The Gender Gap Evolution History of Best 5 and worst 5 Countries in terms of gender gap
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+emp_gap2017 <- emp_gap %>%  filter(Year == 2017)
+worst5gendergap <- emp_gap2017 %>% arrange(desc(Value))%>%slice(1:5)%>%mutate(category="worst5")
+worst8gendergap <- emp_gap2017 %>% arrange(desc(Value))%>%slice(1:9)%>%mutate(category="worst8")
+best5gendergap <- emp_gap2017 %>% arrange(Value)%>%slice(1:5)%>%mutate(category="best5")
+worstbest <- bind_rows(worst8gendergap,best5gendergap)
+worstbest5 <- bind_rows(worst5gendergap,best5gendergap)
+
+emp_gap <- family %>% filter(IND=="FAM6A")
+wb_gender_gap <- emp_gap %>% filter(Country %in% worstbest5$Country)%>%mutate(category = ifelse(Country%in%worst5gendergap$Country,"worst5","best5"))
+plot_ly(
+  data = wb_gender_gap ,
+  x = ~YEAR, 
+  y = ~Value,
+  color = ~Country,
+  type = "scatter",
+  mode = "lines",
+  linetype = ~category,
+  line = list(width = 2)
+) %>%
+  layout(title = '<b> Comparison of Gender Gap History between best and worst gender gap countries</b>', titlefont = list(size=15), xaxis = list(title = 'YEAR'), 
+         yaxis = list(title = 'Gender gap (male-less-female) in the employment rate'), showlegend = FALSE)
+```
+  Use gender gap rate in 2017, we concluded 5 best and 5 worst courntries in terms of gender gap rate. We specifically investigated how their gender gap evolute through the history. 
+  The result shows that the overall gender gap for these 10 countries were narrowing from 1990 to 2017. For the best 5 countries, they seems to do a good job on gender equality since 1990, and most of them are close to the eqaulity line in terms of employment gap. For countries like Malta, although it still rank the worst 5 gender gap country in 2017, we can see that it actually had improved from 41.9% to 20.4%. Koreal improved a little from 25% to 19%.
+
+
+### 2. Relationship between Gender Gap & Public Social Expenditure on Family
+##### 2-1. Public Spending on Family Category
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+expenditure_cat <- family%>%filter(IND %in%  c("FAM11A","FAM11B","FAM11C","FAM11D"))
+expenditure_cat2017<-expenditure_cat%>%filter(Year == 2017)
+b11 <- expenditure_cat2017 %>% filter(IND == "FAM11B")%>%mutate(B11=Value)
+c11 <- expenditure_cat2017 %>% filter(IND == "FAM11C")%>%mutate(C11=Value)
+d11 <- expenditure_cat2017 %>% filter(IND == "FAM11D")%>%mutate(D11=Value)
+cat2017 <- b11 %>% left_join(c11, by='Country') %>% left_join(d11, by='Country')
+
+cat <- plot_ly(cat2017, x = ~Country, y = ~B11, type = 'bar', name = 'Cash',marker = list(color = 'sky blue'))
+cat <- cat %>% add_trace(y = ~C11, name = 'Services',marker = list(color = 'gray'))
+cat <- cat %>% add_trace(y = ~D11, name = 'Tax Break for families',marker = list(color = 'black'))
+cat <- cat %>% layout(title = '<b> Public Spending on Family Benefit</b>', titlefont = list(size=15),xaxis = list(title = "Countries"),yaxis = list(title = 'Percent of GDP'),legend = list(title=list(text='<b> Categories </b>')), barmode = 'stack')
+
+cat
+```
+ The proportional amount spent in cash, services and tax measures varies across countries. Most, but not
+all, OECD countries spend more on cash benefits than on services or tax breaks for families with children.
+In contrast in Chile, Colombia, Denmark, Finland, France, Germany, Iceland, Japan, Korea, Lithuania,
+Mexico, Norway, Spain, Sweden, Turkey and the United States, spending on services constitutes over
+half of spending on family benefits. In the Czech Republic, France, Germany, Hungary, and Switzerland,
+public expenditure on tax-breaks for families reaches more than 0.5% of GDP.
+
+##### 2-2. Geo-spatial Visualization for public social expenditure on family
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+expenditure_2017 <- public_social_expenditure%>%filter(Year == 2017)%>%select(Country,Value)%>%rename(Family_Public_Expenditure_Rate=Value)
+fertility2017<- family %>%filter(IND=="FAM1")%>%filter(Year==2017)%>%select(Country,Value)%>%rename(Fertility_Rate=Value)
+maternal_leave2017<- family %>%filter(IND=="FAM12A")%>%filter(Year==2017)%>%select(Country,Value)%>%rename(Maternal_Leave_weeks=Value)
+faternal_leave2017<- family %>%filter(IND=="FAM12B")%>%filter(Year==2017)%>%select(Country,Value)%>%rename(Fraternal_Leave_weeks=Value)
+```
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+quartiles17 <- public_social_expenditure %>%mutate(quartiles_2017 = case_when(Year == 2017&Value>=0.49&Value<1.75~"First Quartile",Year == 2017&Value>=1.75&Value<2.32~"Second Quartile",Year == 2017&Value>=2.32&Value<3.155~"Third Quartile",Year == 2017&Value>=3.155&Value<3.6~"Fourth Quartile"))
+
+
+world_spdf = readOGR(dsn= "world_map", 
+                     layer="TM_WORLD_BORDERS_SIMPL-0.3",verbose=FALSE)
+
+quantile17 <- quartiles17 %>% filter(Year == 2017)
+# Merge the QoG data to Shape Files
+combined <- world_spdf@data %>% 
+  left_join(quantile17, by = c(NAME = "Country"))
+world_spdf@data <- combined
+
+
+leaflet(world_spdf, 
+              options = leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>% 
+ setView(lat=10, lng=0 , zoom=2) %>%
+ # Add country borders 
+ addPolygons(stroke = TRUE, smoothFactor = 0.5,
+             weight=1, color='#333333', opacity=1, 
+ # Add colors for life exp quantiles
+             fillColor = ~colorQuantile("RdBu", Value)(Value), #RdBu #PiYG #RdGy
+             fillOpacity = 1,
+  # Add label 
+  label = ~stringr::str_c(NAME, ' ',
+          formatC(Value, big.mark = ',', format='d')),
+  labelOptions = labelOptions(direction = 'auto'),
+ # Add hightlighting for polygons
+  highlightOptions = highlightOptions( #<<
+          color='#000000', weight = 3, #<<
+          bringToFront = TRUE, sendToBack = TRUE) #<<
+    ) %>% 
+  addLegend(
+  "bottomright", 
+  pal = colorQuantile("RdBu", world_spdf$Value, n=4),
+  values = ~Value,
+  title = htmltools::HTML("2017 Total public social expenditure on families as a % of GDP"),
+opacity = 1, 
+  labFormat = function(type, cuts, p) {
+n = length(cuts)
+paste0(cuts[-n], " – ", cuts[-1])}
+)
+
+
+```
+
+ For the public social expenditures on family as a percent of GDP, we chose to look at data in 2017 since it is the recent year that has the maximum amount of data to analyze. We divided the expenditure into 4 quantile representing 4 colors. First quantile is red, second quantile is orange, third quantile is sky blue and fourth quantile is dark blue. Countries which are highlighted in red means that their public expenditure falls into 0.49% - 1.77% of GDP. For example, US, Portugal, Mexico, Columbia and Turkey are all spend comparatively lowest amount in family as a percent of GDP. Iceland, Norway, Sweden, France, Germany are countries spend comparatively highest amount in family as a percent of GDP, which are from 3.16% to 3.6% of GDP
+  
+
+##### 2-3. The Total Public Social Expenditure evolution of Best 5 and worst 5 Countries in terms of gender gap
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+wb_expenditure <- public_social_expenditure %>% filter(Country %in% worstbest$Country)%>%mutate(category = ifelse(Country%in%worst8gendergap$Country,"worst5","best5"))
+plot_ly(
+  data = wb_expenditure,
+  x = ~YEAR, 
+  y = ~Value,
+  color = ~Country,
+  type = "scatter",
+  mode = "lines",
+  linetype = ~category,
+  line = list(width = 2)
+) %>%
+  layout(title = '<b> Comparison of public social expenditure for families between best and worst gender gap countries</b>', titlefont = list(size=15), xaxis = list(title = 'YEAR'), 
+         yaxis = list(title = 'Total Public social expenditure for families as a % of GDP'), showlegend = FALSE)
+```
+
+  In order to see the correlation between public social expenditures and gender gap, we analyze the evolution of public expenditures on family of worst 5 and best 5 countries in terms of gender gap. 
+  From the result, we can see that it has a obviously differences on expenditure. Countries has more gender equality seems to have more public expenditures on family. However, for worst countries, there seems to have a trend to spend more on families over the past years. 
+  Public spending accounted for here concerns public support that is exclusively for families (e.g. child payments and allowances, parental leave benefits and childcare support), only. Spending in other social policy areas such as health and housing support also assists families, but not exclusively, and is not included
+here. 
+
+
+##### 2-4. Relationship between gender gap and public social expenditure on family
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+gender_gap <- family %>% filter(Indicator == "Gender gap (male-less-female) in the employment-to-population rate") %>%
+  select(COU, Country, Sex, Year,Unit,Value) %>% 
+  rename(Gender_gap_employment = Value)
+
+total_expenditure <- family %>% filter(Indicator == "Total public social expenditure on families as a % of GDP") %>%
+  select(COU, Country, Sex, Year,Unit,Value) %>% 
+  rename(total_social_expenditure_of_GDP= Value)
+
+gap_expenditure_2017 <- left_join(gender_gap, total_expenditure, by =c("COU","Country","Year")) %>% 
+  filter(Year == "2017")
+#plot
+plot_gap <- ggplot(data=gap_expenditure_2017, 
+       aes(x=total_social_expenditure_of_GDP,
+           y=Gender_gap_employment)) + 
+  geom_point(alpha = 0.5, aes(col = Country)) +
+  geom_smooth()+
+  labs(x = "Total social expenditure of GDP(%)",
+       y = "Gender gap for full-time employment",
+       title ="Relationship between Social Expenditure and Gender Wage Gap")
+
+ggplotly(plot_gap)
+```
+From the graph above, it shows a negative relationship between social expenditure and gender gap, which indicates that for countries who spend more social expenditure on families, the gender gap are more likely to be small. 
+
+### 3. Relationship between Gender Gap & Fertility Rate
+
+##### 3-1.Fertility Rate for Best and Worst Gender Gap countries
+```{r, echo=FALSE, warning=FALSE}
+fert <- family %>% filter(IND=="FAM1")
+fert_gender_gap <- fert %>% filter(Country %in% worstbest5$Country)%>%mutate(category = ifelse(Country%in%worst5gendergap$Country,"worst5","best5"))
+plot_ly(
+  data = wb_gender_gap ,
+  x = ~YEAR, 
+  y = ~Value,
+  color = ~Country,
+  type = "scatter",
+  mode = "lines",
+  linetype = ~category,
+  line = list(width = 2)
+) %>%
+  layout(title = '<b> Comparison of fertility rate between best and worst gender gap countries</b>', titlefont = list(size=15), xaxis = list(title = 'YEAR'), 
+         yaxis = list(title = 'Total Fertility Rate'),showlegend=FALSE)
+
+```
+From the result, there has an obvious comparison of fertility rate between the "worst" and "best" gender gaps country. In particular, for countries tend to be gender equality in terms of employment rate, they have much lower fertility rate than countries which have a worst gender inequality in terms of employment rate. Further, we can observe a trend of decreasing fertility rate for worst gender gap countries.
+
+
+##### 3-2. Relationship between Fertility rate & gender gap
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+gender_gap <- family %>% filter(Indicator == "Gender gap (male-less-female) in the employment-to-population rate") %>%
+  select(COU, Country, Sex, Year,Unit,Value) %>% 
+  rename(Gender_gap_employment = Value)
+
+fertility_rate <- family %>% filter(Indicator == "Total fertility rate") %>%
+  select(COU, Country, Sex, Year,Unit,Value) %>% 
+  rename(fertility_rate = Value)
+
+fertility_2017 <- left_join(gender_gap, fertility_rate, by =c("COU","Country","Year")) %>% 
+  filter(Year == "2017") 
+
+plot_fertility <- ggplot(data=fertility_2017, 
+       aes(x=Gender_gap_employment,
+           y=fertility_rate)) + 
+  geom_point(alpha = 0.5, aes(col = Country)) +
+  geom_smooth() + 
+  guides(size=FALSE) + 
+  labs(x = "Gender gap for full-time employment",
+       y = "Fertility_rate",
+       title ="Relationship between Gender Wage Gap and fertility for 2017")
+
+ggplotly(plot_fertility)
+```
+From this plot, we can see an overall positive relationship for gender gap and fertility rate. Although most countries are concentrated on the left corner, which shows slightly relationship between gender gap and fertility rate. However, for several specific countries, for example,Turkey, Mexico and Costa Rica, have large gender gap and relatively high fertility rate at the same time.It probably can be explained by that women cannot receive equal treatment during the employment and thus more women get married and give birth to child. In addition, from the result of government expenditure we get previously, these countries also have very low social expenditure on family. 
+
+### 4. Relationship between Gender Gap & Age
+
+##### 4-1.Employment rate for different age groups comparison for best contries
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+plot_all <- employment %>% 
+  filter(Age == "20 to 24" | Age == "25 to 29" | Age == "30 to 34" | Age == "35 to 39" | Age == "40 to 44"| Age == "45 to 49"|Age == "50 to 54"|Age == "55 to 59"|Age == "60 to 64"|Age == "65 to 69") %>% 
+  filter(Series == "Employment/population ratio") %>% 
+  filter(Country == "Sweden"|Country == "Norway"|Country == "Lithuania"|Country == "Finland"|Country == "	
+Latvia") %>% 
+  filter(Sex == "Women" | Sex == "Men") %>% 
+  filter(Time =="2017")
+```
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+#employment <- employment%>% mutate(category =  case_when(Country%in%worst5gendergap$Country ~"worst5",
+      #                             Country%in%best5gendergap$Country~"best5"))
+
+plot_all <- employment %>% 
+  filter(Age == "20 to 24" | Age == "25 to 29" | Age == "30 to 34" | Age == "35 to 39" | Age == "40 to 44"| Age == "45 to 49"|Age == "50 to 54"|Age == "55 to 59"|Age == "60 to 64"|Age == "65 to 69") %>% 
+  filter(Series == "Employment/population ratio") %>% 
+  filter(Country == "Sweden"|Country == "Norway"|Country == "Lithuania"|Country == "Finland"|Country == "Latvia") %>% 
+  filter(Sex == "Women" | Sex == "Men") %>% 
+  filter(Time =="2017") %>%
+  ggplot( 
+       mapping = aes(x = factor(Age), 
+           y = Value,
+           group = Sex,
+           color = Sex)) +
+  geom_point()+
+  geom_line() + 
+  facet_wrap(~Country) +
+  labs(x = "Age Group", 
+       y = "Employment rate", 
+       title = "Employment rate for different age groups for “best” countries in 2017 ") +
+  theme(axis.text.x = element_text(angle = 90, size = 8) )
+
+ggplotly(plot_all)
+
+```
+The "best" countries are selected from previous result, which have least gender gap. From the above graph, we can see the gender gap for all ages are quite small. Although gaps for birth age, which is generally from 25 to 40, are relatively larger than other age groups for Finland and Latvia, they still converges very soon. This might be the result of their good policy to leverage the gender inequality, for example, Norway have 15 weeks parental leave for fathers and Sweden have 14.5 weeks. 
+
+
+##### 4-2.Employment rate for different age groups comparison for worst contries
+```{r, echo=FALSE, warning=FALSE}
+plot_all <- employment %>% 
+  filter(Age == "20 to 24" | Age == "25 to 29" | Age == "30 to 34" | Age == "35 to 39" | Age == "40 to 44"| Age == "45 to 49"|Age == "50 to 54"|Age == "55 to 59"|Age == "60 to 64"|Age == "65 to 69") %>% 
+  filter(Series == "Employment/population ratio") %>% 
+  filter(Country == "Turkey"|Country == "Korea"|Country == "Colombia"|Country == "Mexico"|Country == "Costa Rica") %>% 
+  filter(Sex == "Women" | Sex == "Men") %>% 
+  filter(Time =="2017") %>%
+  ggplot( 
+       mapping = aes(x = factor(Age), 
+           y = Value,
+           group = Sex,
+           color = Sex)) +
+  geom_point()+
+  geom_line() + 
+  facet_wrap(~ Country) +
+  labs(x = "Age Group", 
+       y = "Employment rate", 
+       title = "Employment rate for different age groups for “worst” countries in 2017 ") +
+  theme(axis.text.x = element_text(angle = 90, size = 8) )
+
+ggplotly(plot_all)
+```
+
+The "worst" countries are selected from previous result, which have largest gender gap.Compare with last graph, we can see the gap between employment rate for women and men are much bigger than the previous graph. For Turkey and Korea, for women in ages of giving birth(25-40), it shows much larger gap between men and women. From the previous result, we know that the government of the these countries all have low social expenditure on family and less weeks for parental leave for fathers. They don't have good policy to eliminate the employment gap between men and women. 
+
+
+### 5. US Case Study and Text Analysis 
+##### 5-1.Employment rate for different age groups comparison for United States
+```{r, echo=FALSE, warning=FALSE}
+plot_all <- employment %>% 
+  filter(Age == "20 to 24" | Age == "25 to 29" | Age == "30 to 34" | Age == "35 to 39" | Age == "40 to 44"| Age == "45 to 49"|Age == "50 to 54"|Age == "55 to 59"|Age == "60 to 64"|Age == "65 to 69") %>% 
+  filter(Series == "Employment/population ratio") %>% 
+  filter(Country == "United States") %>% 
+  filter(Sex == "Women" | Sex == "Men") %>% 
+  filter(Time =="2017") %>%
+  ggplot( 
+       mapping = aes(x = factor(Age), 
+           y = Value,
+           group = Sex,
+           color = Sex)) +
+  geom_point()+
+  geom_line() + 
+  labs(x = "Age Group", 
+       y = "Employment rate", 
+       title = "Employment rate for different age groups in United States for 2017 ") +
+  theme(axis.text.x = element_text(angle = 90, size = 8) )
+
+ggplotly(plot_all)
+```
+For United States, we can see the employment gap for men and women is larger in age of birth(25~40), compared with other ages. This can be explained by that until today, FMLA (The Family and Medical Leave Act of 1993) is the only labor law in the US, which provide employees with job-protected but unpaid leave for qualified medical and family reasons. Compared to other OECD countries, where paid leave are common policies for expectant mothers, US fall behind. Also, from the previous result, we can see United States has less public social expenditure on family than other countries and has no paid parental leave for fathers. 
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+leaves <- family %>% filter(IND == 'FAM12A'|IND =='FAM12B')%>%filter(Year==2017)
+leaves <- leaves %>% mutate(Category_leave = ifelse(IND=="FAM12A","Mother Leave","Father Leave"))
+
+m<-ggplot(leaves, aes(fill=Category_leave, y=Value, x=Country)) + 
+    scale_fill_manual(values = c("#00BFC4","#F8766D")) +
+    geom_bar(position="dodge", stat="identity")+
+    ggtitle("Lengths in Weeks Father Leaves and Mother Leaves") +
+    xlab("Countries")+ylab("Weeks")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+                                                                                                                           
+ggplotly(m)
+                                                                                                                          
+```
+ 
+
+##### 5-2.The WordCloud of US Presidential Inaugural Address Since 1960
+```{r, echo=FALSE, warning=FALSE}
+speech1 <- speech
+
+speech1$all <- gsub(" will ", " ", speech1$all) #replace meaningless verbs
+speech1$all <- gsub(" let ", " ", speech1$all)
+speech1$all <- gsub(" make ", " ", speech1$all)
+speech1$all <- gsub(" must ", " ", speech1$all)
+speech1$all <- gsub(" can ", " ", speech1$all)
+
+speech1$all <- gsub("[[:punct:]]", " ", speech1$all) #replace punctuation
+speech1$all <- gsub("[[:digit:]]", " ", speech1$all) #replace digits
+speech1$all <- gsub("[ \t]{2,}", " ", speech1$all)  #replace two or more tabs
+speech1$all <- gsub("^\\s+|\\s+$", " ", speech1$all) #replace start/end with more than one white spaces
+speech1 <- sapply(speech1$all, function(row) iconv(row, "latin1", "ASCII", sub="")) %>% #covert Latin1 to ASCII
+  paste(unlist(.), collapse =" ") #concatenate into one corpus
+speechcorp <- Corpus(VectorSource(speech1)) %>% #Convert to vector
+  tm_map(PlainTextDocument) %>% #Create plain text
+  tm_map(removePunctuation) %>% #Remove punctuation
+  tm_map(content_transformer(tolower)) %>% #Convert to lower case
+  tm_map(removeWords, stopwords("english")) #Remove stopwords
+
+wordcloud(speechcorp, max.words = 100, min.freq=1,random.order = FALSE, rot.per=0, colors=brewer.pal(8, "Dark2"))
+```
+
+The backward in policy-making is consistent with our research regarding the presidential inaugural address since 1960. From the word cloud, we can notice that the presidents paid little attention on the issue of gender inequality. Words like "women" or "gender" do not even list in the top100 most frequently used words. 
+
+
+
+### 6. Interactive Data Table for all information
+#####  DATA TABLE of Gender Gap Ranking vs. Public Expenditure on Families
+
+The Datatable below has the ranking by gender gap of OECD countries with their public expenditures on families.
+```{r,echo=FALSE,warning=FALSE}
+library(DT)
+emp_gap2017_dt <- emp_gap2017 %>%  select(Country,Year,Value)%>%arrange(Value)%>%mutate(Gender_Gap_Rank=dense_rank(Value))%>%
+  left_join(expenditure_2017,by="Country")%>%rename(Gender_Gap_Rate=Value)%>%left_join(fertility2017,by="Country")%>%left_join(maternal_leave2017,by='Country')%>%left_join(faternal_leave2017,by="Country")
+emp_gap2017_dt <- datatable(emp_gap2017_dt)
+emp_gap2017_dt
+```
